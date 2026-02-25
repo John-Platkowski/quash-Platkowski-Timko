@@ -13,6 +13,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include "quash.h"
+#include <assert.h>
+#include "deque.h"
 
 // Remove this and all expansion calls to it
 /**
@@ -21,33 +23,30 @@
 #define IMPLEMENT_ME()                                                  \
   fprintf(stderr, "IMPLEMENT ME: %s(line %d): %s()\n", __FILE__, __LINE__, __FUNCTION__)
 
+#define FINISH_ME()                                                  \
+  fprintf(stderr, "FINISH ME: %s(line %d): %s()\n", __FILE__, __LINE__, __FUNCTION__)
 /***************************************************************************
  * Interface Functions
  ***************************************************************************/
 
-// Return a string containing the current working directory.
-char* get_current_directory(bool* should_free) {
-  // TODO: Get the current working directory. This will fix the prompt path.
-  // HINT: This should be pretty simple 
 
-  // Change this to true if necessary
+
+// Return a string containing the current working directory.
+char* get_current_directory(bool* should_free) 
+{ 
   *should_free = true;
 
   return get_current_dir_name();
 }
 
 // Returns the value of an environment variable env_var
-const char* lookup_env(const char* env_var) {
-  // TODO: Lookup environment variables. This is required for parser to be able
+const char* lookup_env(const char* env_var) 
+{
+  // Lookup environment variables. This is required for parser to be able
   // to interpret variables from the command line and display the prompt
   // correctly
-  // HINT: This should be pretty simple
-  IMPLEMENT_ME();
 
-  // TODO: Remove warning silencers
-  (void) env_var; // Silence unused variable warning
-
-  return "???";
+  return getenv(env_var);
 }
 
 // Check the status of background jobs
@@ -167,14 +166,20 @@ void run_kill(KillCommand cmd) {
 
 
 // Prints the current working directory to stdout
-void run_pwd() {
+void run_pwd() 
+{
+  bool should_free;
+  char* cwd = get_current_directory(&should_free);
+  assert(cwd != NULL);
   // TODO: Print the current working directory
-  IMPLEMENT_ME();
-
+  fprintf(stdout, "%s\n", cwd);
   // Flush the buffer before returning
   fflush(stdout);
+  if (should_free) 
+  {
+    free(cwd);
+  }
 }
-
 // Prints all background jobs currently in the job list to stdout
 void run_jobs() {
   // TODO: Print background jobs
@@ -294,31 +299,30 @@ void create_process(CommandHolder holder) {
   bool r_out = holder.flags & REDIRECT_OUT;
   bool r_app = holder.flags & REDIRECT_APPEND; // This can only be true if r_out
                                                // is true
-
-  // TODO: Remove warning silencers
-  (void) p_in;  // Silence unused variable warning
-  (void) p_out; // Silence unused variable warning
-  (void) r_in;  // Silence unused variable warning
-  (void) r_out; // Silence unused variable warning
-  (void) r_app; // Silence unused variable warning
-
+  
   // TODO: Setup pipes, redirects, and new process
-  IMPLEMENT_ME();
-
+  FINISH_ME();
+  pid_t pid = fork();
+  if (pid == 0)
+  {
+    child_run_command(holder.cmd);
+    exit(0);
+  }
+  parent_run_command(holder.cmd);
   //parent_run_command(holder.cmd); // This should be done in the parent branch of
                                   // a fork
   //child_run_command(holder.cmd); // This should be done in the child branch of a fork
 }
 
 // Run a list of commands
-void run_script(CommandHolder* holders) {
-  if (holders == NULL)
-    return;
+void run_script(CommandHolder* holders) 
+{
+  if (holders == NULL) return;
 
   check_jobs_bg_status();
 
-  if (get_command_holder_type(holders[0]) == EXIT &&
-      get_command_holder_type(holders[1]) == EOC) {
+  if (get_command_holder_type(holders[0]) == EXIT && get_command_holder_type(holders[1]) == EOC) 
+  {
     end_main_loop();
     return;
   }
@@ -327,14 +331,16 @@ void run_script(CommandHolder* holders) {
 
   // Run all commands in the `holder` array
   for (int i = 0; (type = get_command_holder_type(holders[i])) != EOC; ++i)
+  {
     create_process(holders[i]);
+  }
 
-  if (!(holders[0].flags & BACKGROUND)) {
+  if (!(holders[0].flags & BACKGROUND)) 
+  {
     // Not a background Job
     // TODO: Wait for all processes under the job to complete
     IMPLEMENT_ME();
-  }
-  else {
+  } else {
     // A background job.
     // TODO: Push the new job to the job queue
     IMPLEMENT_ME();
