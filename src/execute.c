@@ -25,6 +25,11 @@
 
 #define FINISH_ME()                                                  \
   fprintf(stderr, "FINISH ME: %s(line %d): %s()\n", __FILE__, __LINE__, __FUNCTION__)
+
+
+
+IMPLEMENT_DEQUE_STRUCT(deque, Command);
+IMPLEMENT_DEQUE(deque, Command);
 /***************************************************************************
  * Interface Functions
  ***************************************************************************/
@@ -53,7 +58,7 @@ const char* lookup_env(const char* env_var)
 void check_jobs_bg_status() {
   // TODO: Check on the statuses of all processes belonging to all background
   // jobs. This function should remove jobs from the jobs queue once all
-  // processes belonging to a job have completed.
+  // processes belonging to a job have completed.*.qsh
   IMPLEMENT_ME();
 
   // TODO: Once jobs are implemented, uncomment and fill the following line
@@ -84,31 +89,36 @@ void print_job_bg_complete(int job_id, pid_t pid, const char* cmd) {
  ***************************************************************************/
 // Run a program reachable by the path environment variable, relative path, or
 // absolute path
-void run_generic(GenericCommand cmd) {
+void run_generic(GenericCommand cmd) 
+{
   // Execute a program with a list of arguments. The `args` array is a NULL
   // terminated (last string is always NULL) list of strings. The first element
   // in the array is the executable
   char* exec = cmd.args[0];
   char** args = cmd.args;
 
-  // TODO: Remove warning silencers
-  (void) exec; // Silence unused variable warning
-  (void) args; // Silence unused variable warning
-
-  // TODO: Implement run generic
-  IMPLEMENT_ME();
+  pid_t pid = fork();
+  if (pid == 0)
+  {
+    execvp(exec, args);
+    return;
+  } else {
+    int status;
+    waitpid(pid, &status, 0);
+  }
 
   perror("ERROR: Failed to execute program");
 }
 
 // Print strings
-void run_echo(EchoCommand cmd) {
+void run_echo(EchoCommand cmd) 
+{
   // Print an array of strings. The args array is a NULL terminated (last
   // string is always NULL) list of strings.
   char** str = cmd.args;
 
   // TODO: Remove warning silencers
-  (void) str; // Silence unused variable warning
+  (void) str; // Silence unused variable warning,
 
   // TODO: Implement echo
   IMPLEMENT_ME();
@@ -118,7 +128,8 @@ void run_echo(EchoCommand cmd) {
 }
 
 // Sets an environment variable
-void run_export(ExportCommand cmd) {
+void run_export(ExportCommand cmd) 
+{
   // Write an environment variable
   const char* env_var = cmd.env_var;
   const char* val = cmd.val;
@@ -133,12 +144,14 @@ void run_export(ExportCommand cmd) {
 }
 
 // Changes the current working directory
-void run_cd(CDCommand cmd) {
+void run_cd(CDCommand cmd) 
+{
   // Get the directory name
   const char* dir = cmd.dir;
 
   // Check if the directory is valid
-  if (dir == NULL) {
+  if (dir == NULL) 
+  {
     perror("ERROR: Failed to resolve path");
     return;
   }
@@ -152,7 +165,8 @@ void run_cd(CDCommand cmd) {
 }
 
 // Sends a signal to all processes contained in a job
-void run_kill(KillCommand cmd) {
+void run_kill(KillCommand cmd) 
+{
   int signal = cmd.sig;
   int job_id = cmd.job;
 
@@ -291,7 +305,8 @@ void parent_run_command(Command cmd) {
  *
  * @sa Command CommandHolder
  */
-void create_process(CommandHolder holder) {
+void create_process(CommandHolder holder) 
+{
   // Read the flags field from the parser
   bool p_in  = holder.flags & PIPE_IN;
   bool p_out = holder.flags & PIPE_OUT;
@@ -302,13 +317,52 @@ void create_process(CommandHolder holder) {
   
   // TODO: Setup pipes, redirects, and new process
   FINISH_ME();
+  int p[2];
+  pipe(p);
+
+
+  // 
+
   pid_t pid = fork();
-  if (pid == 0)
+  if (pid == 0) // Child process
   {
+    if (p_in) 
+    {
+      dup2(p[0], STDIN_FILENO);
+    }
+    if (p_out)
+    {
+      dup2(p[1], STDOUT_FILENO);
+    }
+    
+    if (r_out)
+    {
+      if (r_app)
+      {
+        int fd = open(holder.redirect_out, "a");
+        dup2(fd, STDOUT_FILENO);
+        close(fd);
+      } else {
+        int fd = open(holder.redirect_in, "w");
+        dup2(fd, STDOUT_FILENO);
+      }
+
+
+    }
+
+    close(p[0]);
+    close(p[1]);
+
+
+
+
     child_run_command(holder.cmd);
     exit(0);
+  } else {
+    
+    parent_run_command(holder.cmd);
   }
-  parent_run_command(holder.cmd);
+  
   //parent_run_command(holder.cmd); // This should be done in the parent branch of
                                   // a fork
   //child_run_command(holder.cmd); // This should be done in the child branch of a fork
