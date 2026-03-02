@@ -115,13 +115,12 @@ void run_echo(EchoCommand cmd)
 {
   // Print an array of strings. The args array is a NULL terminated (last
   // string is always NULL) list of strings.
-  char** str = cmd.args;
-
-  // TODO: Remove warning silencers
-  (void) str; // Silence unused variable warning,
-
-  // TODO: Implement echo
-  IMPLEMENT_ME();
+  char** strs = cmd.args;
+  size_t n = sizeof(strs) / sizeof(strs[0]);
+  for (int *str = strs; str < strs + n; ++str)
+  {
+    printf(str);
+  }
 
   // Flush the buffer before returning
   fflush(stdout);
@@ -299,6 +298,24 @@ void parent_run_command(Command cmd) {
  *
  * @sa Command CommandHolder
  */
+
+
+/* HINT
+The create_process() function is intended to be the place where you fork processes, handle pipe creation, and file redirection. 
+You should not call execvp(3) from this function. Instead you should call derivatives of the example_run_command() function. 
+Also you can determine whether you should use the boolean variables at the top of this function to determine if pipes and redirects should be setup.
+It may be necessary to keep a global execution state structure so that different calls to create process can view important information created in 
+previous invocations of create_process() (i.e. the file descriptors for open pipes of previous processes).
+*/
+
+typedef struct exec_state_s
+{
+  int cur_pipe[2];
+  int prev_pipe_read; 
+} exec_state_t;
+
+exec_state_t exec_g;
+
 void create_process(CommandHolder holder) 
 {
   // Read the flags field from the parser
@@ -312,21 +329,27 @@ void create_process(CommandHolder holder)
   // TODO: Setup pipes, redirects, and new process
   FINISH_ME();
   int p[2];
-  pipe(p);
-
+  if (p_out)
+  {
+    pipe(p);
+  }
 
   // 
 
   pid_t pid = fork();
-  if (pid == 0) // Child process
+  // Child process
+  if (pid == 0) 
   {
     if (p_in) 
     {
-      dup2(p[0], STDIN_FILENO);
+      dup2(exec_g.prev_pipe_read, STDIN_FILENO);
+      close(exec_g.prev_pipe_read);
     }
     if (p_out)
     {
       dup2(p[1], STDOUT_FILENO);
+      close(p[0]);
+      close(p[1]);
     }
     
     if (r_in)
@@ -350,23 +373,23 @@ void create_process(CommandHolder holder)
       }
     }
 
-    close(p[0]);
-    close(p[1]);
-
 
 
 
     child_run_command(holder.cmd);
     exit(0);
-  } else {
-    close(p[0]);
-    close(p[1]);
+
+
+  // Parent Process
+  } else { 
+    if (p_out)
+    {
+      close(p[1]);
+      exec_g.prev_pipe_read = pipe_fds[0];
+    }
     parent_run_command(holder.cmd);
   }
-  
-  //parent_run_command(holder.cmd); // This should be done in the parent branch of
-                                  // a fork
-  //child_run_command(holder.cmd); // This should be done in the child branch of a fork
+  // Track PID
 }
 
 // Run a list of commands
