@@ -134,13 +134,7 @@ void run_export(ExportCommand cmd)
   const char* env_var = cmd.env_var;
   const char* val = cmd.val;
 
-  // TODO: Remove warning silencers
-  (void) env_var; // Silence unused variable warning
-  (void) val;     // Silence unused variable warning
-
-  // TODO: Implement export.
-  // HINT: This should be quite simple.
-  IMPLEMENT_ME();
+  setenv(env_var, val, 1);
 }
 
 // Changes the current working directory
@@ -185,7 +179,7 @@ void run_pwd()
   bool should_free;
   char* cwd = get_current_directory(&should_free);
   assert(cwd != NULL);
-  // TODO: Print the current working directory
+  // Print the current working directory
   fprintf(stdout, "%s\n", cwd);
   // Flush the buffer before returning
   fflush(stdout);
@@ -335,6 +329,13 @@ void create_process(CommandHolder holder)
       dup2(p[1], STDOUT_FILENO);
     }
     
+    if (r_in)
+    {
+      int fd = open(holder.redirect_in, "r");
+      dup2(fd, STDIN_FILENO);
+      close(fd);
+    }
+
     if (r_out)
     {
       if (r_app)
@@ -343,11 +344,10 @@ void create_process(CommandHolder holder)
         dup2(fd, STDOUT_FILENO);
         close(fd);
       } else {
-        int fd = open(holder.redirect_in, "w");
+        int fd = open(holder.redirect_out, "w");
         dup2(fd, STDOUT_FILENO);
+        close(fd);
       }
-
-
     }
 
     close(p[0]);
@@ -359,7 +359,8 @@ void create_process(CommandHolder holder)
     child_run_command(holder.cmd);
     exit(0);
   } else {
-    
+    close(p[0]);
+    close(p[1]);
     parent_run_command(holder.cmd);
   }
   
@@ -400,6 +401,6 @@ void run_script(CommandHolder* holders)
     IMPLEMENT_ME();
 
     // TODO: Once jobs are implemented, uncomment and fill the following line
-    // print_job_bg_start(job_id, pid, cmd);
+    //print_job_bg_start(job_id, pid, cmd);
   }
 }
