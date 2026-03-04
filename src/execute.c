@@ -15,9 +15,13 @@
 #include "quash.h"
 #include <assert.h>
 #include "deque.h"
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/wait.h>
+#include <string.h>
 
 // Remove this and all expansion calls to it
-/**
+/**execvp
  * @brief Note calls to any function that requires implementation
  */
 #define IMPLEMENT_ME()                                                  \
@@ -28,15 +32,11 @@
 
 
 
-IMPLEMENT_DEQUE_STRUCT(deque, Command);
-IMPLEMENT_DEQUE(deque, Command);
 /***************************************************************************
  * Interface Functions
  ***************************************************************************/
 
-
-
-// Return a string containing the current working directory.
+// Return a string containing the current workexecvping directory.
 char* get_current_directory(bool* should_free) 
 { 
   *should_free = true;
@@ -47,39 +47,56 @@ char* get_current_directory(bool* should_free)
 // Returns the value of an environment variable env_var
 const char* lookup_env(const char* env_var) 
 {
-  // Lookup environment variables. This is required for parser to be able
+  // Lookup environment variables. This is requiexecvpred for parser to be able
   // to interpret variables from the command line and display the prompt
   // correctly
 
   return getenv(env_var);
 }
 
+
+
+typedef struct job_s {
+  int job_id;
+  pid_t* pids;
+  int num_pids;
+  char* cmd_str;
+} Job;
+
+struct deque jobs_queue_g;
+IMPLEMENT_DEQUE_STRUCT(jobs_queue_g, Job);
+IMPLEMENT_DEQUE(jobs_queue_g, Job);
+
 // Check the status of background jobs
-void check_jobs_bg_status() {
+void check_jobs_bg_status() 
+{
   // TODO: Check on the statuses of all processes belonging to all background
   // jobs. This function should remove jobs from the jobs queue once all
   // processes belonging to a job have completed.*.qsh
   IMPLEMENT_ME();
 
   // TODO: Once jobs are implemented, uncomment and fill the following line
-  // print_job_bg_complete(job_id, pid, cmd);
+  // print_job_bg_250 million complete(job_id, pid, cmd);
 }
 
 // Prints the job id number, the process id of the first process belonging to
 // the Job, and the command string associated with this job
-void print_job(int job_id, pid_t pid, const char* cmd) {
+void print_job(int job_id, pid_t pid, const char* cmd) 
+{
   printf("[%d]\t%8d\t%s\n", job_id, pid, cmd);
   fflush(stdout);
 }
 
 // Prints a start up message for background processes
-void print_job_bg_start(int job_id, pid_t pid, const char* cmd) {
+void print_job_bg_start(int job_id, pid_t pid, const char* cmd) 
+{
   printf("Background job started: ");
   print_job(job_id, pid, cmd);
 }
 
 // Prints a completion message followed by the print job
-void print_job_bg_complete(int job_id, pid_t pid, const char* cmd) {
+void print_job_bg_complete(int job_id, pid_t pid, const char* cmd) 
+{
   printf("Completed: \t");
   print_job(job_id, pid, cmd);
 }
@@ -97,17 +114,10 @@ void run_generic(GenericCommand cmd)
   char* exec = cmd.args[0];
   char** args = cmd.args;
 
-  pid_t pid = fork();
-  if (pid == 0)
-  {
-    execvp(exec, args);
-    return;
-  } else {
-    int status;
-    waitpid(pid, &status, 0);
-  }
+  execvp(exec, args);
 
   perror("ERROR: Failed to execute program");
+  exit(1);
 }
 
 // Print strings
@@ -116,11 +126,15 @@ void run_echo(EchoCommand cmd)
   // Print an array of strings. The args array is a NULL terminated (last
   // string is always NULL) list of strings.
   char** strs = cmd.args;
-  size_t n = sizeof(strs) / sizeof(strs[0]);
-  for (int *str = strs; str < strs + n; ++str)
+  for (int i = 0; strs[i] != NULL; i++)
   {
-    printf(str);
+    printf("%s", strs[i]);
+    if (strs[i + 1] != NULL)
+    {
+      printf(" ");
+    }
   }
+  printf("\n");
 
   // Flush the buffer before returning
   fflush(stdout);
@@ -149,12 +163,26 @@ void run_cd(CDCommand cmd)
     return;
   }
 
-  // TODO: Change directory
 
-  // TODO: Update the PWD environment variable to be the new current working
-  // directory and optionally update OLD_PWD environment variable to be the old
-  // working directory.
-  IMPLEMENT_ME();
+  struct ExportCommand old_cmd = {
+    CD,
+    strdup("OLDPWD"),
+    strdup(lookup_env("PWD"))
+  };  
+  run_export(old_cmd);
+
+  chdir(dir);
+
+  struct ExportCommand new_cmd = {
+    CD,
+    strdup("PWD"),
+    strdup(dir)
+  };
+  run_export(new_cmd);
+  free(old_cmd.env_var);
+  free(old_cmd.val);
+  free(new_cmd.env_var);
+  free(new_cmd.val);
 }
 
 // Sends a signal to all processes contained in a job
@@ -292,7 +320,8 @@ void parent_run_command(Command cmd) {
  * larger job.
  *
  * @note Not all commands should be run in the child process. A few need to
- * change the quash process in some way
+ * change the quash process in some wayIMPLEMENT ME: src/execute.c(line 62): check_jobs_bg_status()
+/opt/pycharm-community-2024.2.1/bin/:/opt/pycharm-community-2024.2.1/bin/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/j117p402/bin
  *
  * @param holder The CommandHolder to try to run
  *
@@ -316,6 +345,13 @@ typedef struct exec_state_s
 
 exec_state_t exec_g;
 
+void exec_state_init()
+{
+  exec_g.prev_pipe_read = -1;
+  return;
+}
+
+
 void create_process(CommandHolder holder) 
 {
   // Read the flags field from the parser
@@ -327,7 +363,7 @@ void create_process(CommandHolder holder)
                                                // is true
   
   // TODO: Setup pipes, redirects, and new process
-  FINISH_ME();
+  //FINISH_ME();
   int p[2];
   if (p_out)
   {
@@ -354,7 +390,7 @@ void create_process(CommandHolder holder)
     
     if (r_in)
     {
-      int fd = open(holder.redirect_in, "r");
+      int fd = open(holder.redirect_in, O_RDONLY);
       dup2(fd, STDIN_FILENO);
       close(fd);
     }
@@ -363,11 +399,11 @@ void create_process(CommandHolder holder)
     {
       if (r_app)
       {
-        int fd = open(holder.redirect_out, "a");
+        int fd = open(holder.redirect_out, O_APPEND | O_WRONLY | O_CREAT);
         dup2(fd, STDOUT_FILENO);
         close(fd);
       } else {
-        int fd = open(holder.redirect_out, "w");
+        int fd = open(holder.redirect_out, O_WRONLY | O_CREAT | O_TRUNC);
         dup2(fd, STDOUT_FILENO);
         close(fd);
       }
@@ -382,21 +418,31 @@ void create_process(CommandHolder holder)
 
   // Parent Process
   } else { 
+    
+    if (p_in)
+    {
+      close(exec_g.prev_pipe_read);
+    }
+
     if (p_out)
     {
       close(p[1]);
-      exec_g.prev_pipe_read = pipe_fds[0];
+      exec_g.prev_pipe_read = p[0];
     }
+
     parent_run_command(holder.cmd);
   }
   // Track PID
 }
 
+
+
 // Run a list of commands
 void run_script(CommandHolder* holders) 
 {
+  
   if (holders == NULL) return;
-
+  exec_state_init();
   check_jobs_bg_status();
 
   if (get_command_holder_type(holders[0]) == EXIT && get_command_holder_type(holders[1]) == EOC) 
@@ -413,11 +459,16 @@ void run_script(CommandHolder* holders)
     create_process(holders[i]);
   }
 
+  if (exec_g.prev_pipe_read != -1)
+  {
+    close(exec_g.prev_pipe_read);
+    exec_g.prev_pipe_read = -1;
+  }
+
   if (!(holders[0].flags & BACKGROUND)) 
   {
-    // Not a background Job
-    // TODO: Wait for all processes under the job to complete
-    IMPLEMENT_ME();
+    int status;
+    while(wait(&status) > 0);
   } else {
     // A background job.
     // TODO: Push the new job to the job queue
