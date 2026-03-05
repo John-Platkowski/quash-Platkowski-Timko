@@ -513,7 +513,8 @@ int get_next_job_id()
 // Run a list of commands
 void run_script(CommandHolder* holders) 
 {
-  
+  FINISH_ME();
+  //SEGFAULT Here!!!! Fix!!!!
   if (holders == NULL) return;
   exec_state_init();
   check_jobs_bg_status();
