@@ -94,7 +94,7 @@ void check_jobs_bg_status()
     Job job = pop_front_jobs_queue(&jobs_queue_g);
     bool complete = true;
 
-    for (int j = 0; j < job.num_pids; j++)
+    for (int j = 0; j < job.num_pids; ++j)
     {
       pid_t pid = job.pids[j];
       
@@ -163,7 +163,7 @@ void run_echo(EchoCommand cmd)
   // Print an array of strings. The args array is a NULL terminated (last
   // string is always NULL) list of strings.
   char** strs = cmd.args;
-  for (int i = 0; strs[i] != NULL; i++)
+  for (int i = 0; strs[i] != NULL; ++i)
   {
     printf("%s", strs[i]);
     if (strs[i + 1] != NULL)
@@ -230,13 +230,13 @@ void run_kill(KillCommand cmd)
 
   size_t len = length_jobs_queue(&jobs_queue_g);
   
-  for (size_t i = 0; i < len; i++)
+  for (size_t i = 0; i < len; ++i)
   {
     Job job = pop_front_jobs_queue(&jobs_queue_g);
 
     if (job.job_id == job_id)
     {
-      for (int j = 0; j < job.num_pids; j++)
+      for (int j = 0; j < job.num_pids; ++j)
       {
         kill(job.pids[j], signal);
       }
@@ -266,7 +266,7 @@ void run_pwd()
 void run_jobs() 
 {
   size_t len = length_jobs_queue(&jobs_queue_g);
-  for (size_t i = 0; i < len; i++)
+  for (size_t i = 0; i < len; ++i)
   {
     Job job = peek_front_jobs_queue(&jobs_queue_g);
     job.cmd_str = get_command_string();
@@ -405,7 +405,7 @@ void exec_state_init()
 }
 
 
-void create_process(CommandHolder holder) 
+pid_t create_process(CommandHolder holder) 
 {
   // Read the flags field from the parser
   bool p_in  = holder.flags & PIPE_IN;
@@ -453,7 +453,7 @@ void create_process(CommandHolder holder)
       if (r_app)
       {
         // 0644 is the octal representation of the permissions where read = 4, write = 2, execute = 1;
-        // Owner = read + write = 6, Group = 4 = read, Other = 4 = read
+        // Owner = read + write = 6, Group = read = 4, Other = read = 4
         int fd = open(holder.redirect_out, O_APPEND | O_WRONLY | O_CREAT, 0644);
         dup2(fd, STDOUT_FILENO);
         close(fd);
@@ -486,8 +486,27 @@ void create_process(CommandHolder holder)
     }
 
     parent_run_command(holder.cmd);
+    return pid;
   }
   // Track PID
+}
+
+int get_next_job_id() 
+{
+  int max_id = 0;
+  size_t len = length_jobs_queue(&jobs_queue_g);
+
+  for (size_t i = 0; i < len; ++i)
+  {
+    Job job = pop_front_jobs_queue(&jobs_queue_g);
+    if (job.job_id > max_id)
+    {
+      max_id = job.job_id;
+    }
+    push_back_jobs_queue(&jobs_queue_g, job);
+  }
+
+  return max_id + 1;
 }
 
 
@@ -505,13 +524,26 @@ void run_script(CommandHolder* holders)
     return;
   }
 
+  pid_t* bg_pids = NULL;
+  size_t num_pids = 0;
+  size_t pid_cap = 0;
+
 
   CommandType type;
 
   // Run all commands in the `holder` array
   for (int i = 0; (type = get_command_holder_type(holders[i])) != EOC; ++i)
   {
-    create_process(holders[i]);
+    pid_t pid = create_process(holders[i]);
+    
+    if (holders[0].flags & BACKGROUND)
+    {
+      pid_cap = pid_cap == 0 ? 4 : pid_cap * 2;
+      bg_pids = realloc(bg_pids, pid_cap * sizeof(pid_t));
+    }
+    
+    bg_pids[num_pids] = pid;
+    num_pids++;
   }
 
   if (exec_g.prev_pipe_read != -1)
@@ -525,11 +557,21 @@ void run_script(CommandHolder* holders)
     int status;
     while(wait(&status) > 0);
   } else {
-    // A background job.
-    // TODO: Push the new job to the job queue
-    IMPLEMENT_ME();
 
-    // TODO: Once jobs are implemented, uncomment and fill the following line
-    //print_job_bg_start(job_id, pid, cmd);
+    Job job;
+
+    job.job_id = get_next_job_id();
+    job.num_pids = num_pids;
+
+    job.pids = malloc(sizeof(pid_t) * job.num_pids);
+    memcpy(job.pids, bg_pids, sizeof(pid_t) * num_pids);
+
+    job.cmd_str = get_command_string();
+    job.job_complete = false;
+
+    push_back_jobs_queue(&jobs_queue_g, job);
+    print_job_bg_start(job.job_id, job.pids[0], job.cmd_str);
+
+    free(bg_pids);
   }
 }
