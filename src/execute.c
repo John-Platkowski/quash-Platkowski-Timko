@@ -84,7 +84,7 @@ void init_jobs()
 // Check the status of background jobs
 void check_jobs_bg_status() 
 {
-  // TODO: Check on the statuses of all processes belonging to all background
+  // Check on the statuses of all processes belonging to all background
   // jobs. This function should remove jobs from the jobs queue once all
   // processes belonging to a job have completed.
 
@@ -378,8 +378,7 @@ void parent_run_command(Command cmd) {
  * larger job.
  *
  * @note Not all commands should be run in the child process. A few need to
- * change the quash process in some wayIMPLEMENT ME: src/execute.c(line 62): check_jobs_bg_status()
-/opt/pycharm-community-2024.2.1/bin/:/opt/pycharm-community-2024.2.1/bin/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/j117p402/bin
+ * change the quash process in some way
  *
  * @param holder The CommandHolder to try to run
  *
@@ -517,7 +516,16 @@ int get_next_job_id()
 // Run a list of commands
 void run_script(CommandHolder* holders) 
 {
-  if (holders == NULL) return;
+  if (holders == NULL) 
+  {
+    return;
+  }
+  // Handle empty input
+  if (get_command_holder_type(holders[0]) == EOC) 
+  {
+    return;
+  }
+
   exec_state_init();
   check_jobs_bg_status();
 
@@ -526,8 +534,6 @@ void run_script(CommandHolder* holders)
     end_main_loop();
     return;
   }
-  // BUG: jobs will execute, but then has a chance of looping syntax errors forever for some reason
-  // This specifically happens with sleep 15
   
   pid_t* bg_pids = NULL;
   size_t num_pids = 0;
