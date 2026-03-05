@@ -43,6 +43,12 @@ void write_env(const char* env_var, const char* val);
  */
 char* get_current_directory(bool* should_free);
 
+
+/**
+ * @brief Initialize the jobs queue
+ */
+void init_jobs();
+
 /**
  * @brief Check on background jobs to see if they have exited
  */

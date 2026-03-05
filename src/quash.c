@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
 
   atexit(destroy_parser);
   atexit(destroy_memory_pool);
-
+  init_jobs();
   // Main execution loop
   while (is_running()) {
     if (is_tty())

@@ -21,7 +21,7 @@
 #include <string.h>
 
 // Remove this and all expansion calls to it
-/**execvp
+/**execvpPlease submit through your lab section's Canva
  * @brief Note calls to any function that requires implementation
  */
 #define IMPLEMENT_ME()                                                  \
@@ -61,22 +61,59 @@ typedef struct job_s {
   pid_t* pids;
   int num_pids;
   char* cmd_str;
+  bool job_complete;
 } Job;
 
-struct deque jobs_queue_g;
-IMPLEMENT_DEQUE_STRUCT(jobs_queue_g, Job);
-IMPLEMENT_DEQUE(jobs_queue_g, Job);
+IMPLEMENT_DEQUE_STRUCT(jobs_queue, Job);
+IMPLEMENT_DEQUE(jobs_queue, Job);
+size_t max_queue_length = 20;
+jobs_queue jobs_queue_g;
 
+
+
+void destroy_job(Job job)
+{
+  free(job.pids);
+  free(job.cmd_str);
+}
+
+void init_jobs()
+{
+  jobs_queue_g = new_destructable_jobs_queue(max_queue_length, destroy_job);
+}
 // Check the status of background jobs
 void check_jobs_bg_status() 
 {
   // TODO: Check on the statuses of all processes belonging to all background
   // jobs. This function should remove jobs from the jobs queue once all
-  // processes belonging to a job have completed.*.qsh
-  IMPLEMENT_ME();
+  // processes belonging to a job have completed.
 
-  // TODO: Once jobs are implemented, uncomment and fill the following line
-  // print_job_bg_250 million complete(job_id, pid, cmd);
+  size_t len = length_jobs_queue(&jobs_queue_g);
+  for (size_t i = 0; i < len; i++)
+  {
+    Job job = pop_front_jobs_queue(&jobs_queue_g);
+    bool complete = true;
+
+    for (int j = 0; j < job.num_pids; j++)
+    {
+      pid_t pid = job.pids[j];
+      
+      if (waitpid(pid, NULL, WNOHANG) == 0)
+      {
+        complete = false;
+        break;
+      }
+    }
+
+    if (complete)
+    {
+      job.job_complete = true;
+      job.cmd_str = get_command_string();
+      print_job_bg_complete(job.job_id, job.pids[0], job.cmd_str);
+    } else {
+      push_back_jobs_queue(&jobs_queue_g, job);
+    }
+  }
 }
 
 // Prints the job id number, the process id of the first process belonging to
@@ -191,12 +228,22 @@ void run_kill(KillCommand cmd)
   int signal = cmd.sig;
   int job_id = cmd.job;
 
-  // TODO: Remove warning silencers
-  (void) signal; // Silence unused variable warning
-  (void) job_id; // Silence unused variable warning
+  size_t len = length_jobs_queue(&jobs_queue_g);
+  
+  for (size_t i = 0; i < len; i++)
+  {
+    Job job = pop_front_jobs_queue(&jobs_queue_g);
 
-  // TODO: Kill all processes associated with a background job
-  IMPLEMENT_ME();
+    if (job.job_id == job_id)
+    {
+      for (int j = 0; j < job.num_pids; j++)
+      {
+        kill(job.pids[j], signal);
+      }
+    }
+
+    push_back_jobs_queue(&jobs_queue_g, job);
+  }
 }
 
 
@@ -216,9 +263,15 @@ void run_pwd()
   }
 }
 // Prints all background jobs currently in the job list to stdout
-void run_jobs() {
-  // TODO: Print background jobs
-  IMPLEMENT_ME();
+void run_jobs() 
+{
+  size_t len = length_jobs_queue(&jobs_queue_g);
+  for (size_t i = 0; i < len; i++)
+  {
+    Job job = peek_front_jobs_queue(&jobs_queue_g);
+    job.cmd_str = get_command_string();
+    print_job(job.job_id, job.pids[0], job.cmd_str);
+  }
 
   // Flush the buffer before returning
   fflush(stdout);
@@ -399,11 +452,13 @@ void create_process(CommandHolder holder)
     {
       if (r_app)
       {
-        int fd = open(holder.redirect_out, O_APPEND | O_WRONLY | O_CREAT);
+        // 0644 is the octal representation of the permissions where read = 4, write = 2, execute = 1;
+        // Owner = read + write = 6, Group = 4 = read, Other = 4 = read
+        int fd = open(holder.redirect_out, O_APPEND | O_WRONLY | O_CREAT, 0644);
         dup2(fd, STDOUT_FILENO);
         close(fd);
       } else {
-        int fd = open(holder.redirect_out, O_WRONLY | O_CREAT | O_TRUNC);
+        int fd = open(holder.redirect_out, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         dup2(fd, STDOUT_FILENO);
         close(fd);
       }
@@ -436,7 +491,6 @@ void create_process(CommandHolder holder)
 }
 
 
-
 // Run a list of commands
 void run_script(CommandHolder* holders) 
 {
@@ -450,6 +504,7 @@ void run_script(CommandHolder* holders)
     end_main_loop();
     return;
   }
+
 
   CommandType type;
 
