@@ -107,9 +107,8 @@ void check_jobs_bg_status()
 
     if (complete)
     {
-      job.job_complete = true;
-      //job.cmd_str = get_command_string();
       print_job_bg_complete(job.job_id, job.pids[0], job.cmd_str);
+      destroy_job(job);
     } else {
       push_back_jobs_queue(&jobs_queue_g, job);
     }
@@ -268,14 +267,16 @@ void run_jobs()
   size_t len = length_jobs_queue(&jobs_queue_g);
   for (size_t i = 0; i < len; ++i)
   {
-    Job job = peek_front_jobs_queue(&jobs_queue_g);
+    Job job = pop_front_jobs_queue(&jobs_queue_g);
     if ((job.num_pids == 0) || job.pids == NULL)
     {
       fprintf(stderr, "Warning: job %d has no processes\n", job.job_id);
+      push_back_jobs_queue(&jobs_queue_g, job);
       continue;
     }
     const char* cmd = job.cmd_str ? job.cmd_str : "<unknown>";
     print_job(job.job_id, job.pids[0], cmd);
+    push_back_jobs_queue(&jobs_queue_g, job);
   }
 
   // Flush the buffer before returning
@@ -535,10 +536,9 @@ void run_script(CommandHolder* holders)
     return;
   }
   
-  pid_t* bg_pids = NULL;
+  pid_t* pids = NULL;
   size_t num_pids = 0;
   size_t pid_cap = 0;
-
 
   CommandType type;
 
@@ -546,25 +546,22 @@ void run_script(CommandHolder* holders)
   for (int i = 0; (type = get_command_holder_type(holders[i])) != EOC; ++i)
   {
     pid_t pid = create_process(holders[i]);
-    
-    if (holders[0].flags & BACKGROUND)
+
+    if (num_pids >= pid_cap)
     {
-      if (num_pids >= pid_cap)
+      pid_cap = pid_cap == 0 ? 4 : pid_cap * 2;
+      pid_t* new_pids = realloc(pids, pid_cap * sizeof(pid_t));
+      if (!new_pids)
       {
-        pid_cap = pid_cap == 0 ? 4 : pid_cap * 2;
-        pid_t* new_pids = realloc(bg_pids, pid_cap * sizeof(pid_t));
-        if (!new_pids)
-        {
-          perror("ERROR: realloc failed for bg_pids");
-          free(bg_pids);
-          exit(1);
-        }
-        bg_pids = new_pids;
+        perror("ERROR: realloc failed for pids");
+        free(pids);
+        exit(1);
       }
-    
-      bg_pids[num_pids] = pid;
-      num_pids++;
+      pids = new_pids;
     }
+
+    pids[num_pids] = pid;
+    num_pids++;
   }
 
   if (exec_g.prev_pipe_read != -1)
@@ -575,8 +572,13 @@ void run_script(CommandHolder* holders)
 
   if (!(holders[0].flags & BACKGROUND)) 
   {
-    int status;
-    while(wait(&status) > 0);
+    // Wait for each foreground process by specific PID so we don't accidentally reap background children.
+    for (size_t i = 0; i < num_pids; i++)
+    {
+      int status;
+      waitpid(pids[i], &status, 0);
+    }
+    free(pids);
   } else {
 
     Job job;
@@ -585,7 +587,7 @@ void run_script(CommandHolder* holders)
     job.num_pids = num_pids;
 
     job.pids = malloc(sizeof(pid_t) * job.num_pids);
-    memcpy(job.pids, bg_pids, sizeof(pid_t) * num_pids);
+    memcpy(job.pids, pids, sizeof(pid_t) * num_pids);
 
     job.cmd_str = strdup(get_command_string());
     job.job_complete = false;
@@ -593,6 +595,6 @@ void run_script(CommandHolder* holders)
     push_back_jobs_queue(&jobs_queue_g, job);
     print_job_bg_start(job.job_id, job.pids[0], job.cmd_str);
 
-    free(bg_pids);
+    free(pids);
   }
 }
