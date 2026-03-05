@@ -108,7 +108,7 @@ void check_jobs_bg_status()
     if (complete)
     {
       job.job_complete = true;
-      job.cmd_str = get_command_string();
+      //job.cmd_str = get_command_string();
       print_job_bg_complete(job.job_id, job.pids[0], job.cmd_str);
     } else {
       push_back_jobs_queue(&jobs_queue_g, job);
@@ -269,8 +269,13 @@ void run_jobs()
   for (size_t i = 0; i < len; ++i)
   {
     Job job = peek_front_jobs_queue(&jobs_queue_g);
-    job.cmd_str = get_command_string();
-    print_job(job.job_id, job.pids[0], job.cmd_str);
+    if ((job.num_pids == 0) || job.pids == NULL)
+    {
+      fprintf(stderr, "Warning: job %d has no processes\n", job.job_id);
+      continue;
+    }
+    const char* cmd = job.cmd_str ? job.cmd_str : "<unknown>";
+    print_job(job.job_id, job.pids[0], cmd);
   }
 
   // Flush the buffer before returning
@@ -415,8 +420,7 @@ pid_t create_process(CommandHolder holder)
   bool r_app = holder.flags & REDIRECT_APPEND; // This can only be true if r_out
                                                // is true
   
-  // TODO: Setup pipes, redirects, and new process
-  //FINISH_ME();
+
   int p[2];
   if (p_out)
   {
@@ -513,8 +517,6 @@ int get_next_job_id()
 // Run a list of commands
 void run_script(CommandHolder* holders) 
 {
-  FINISH_ME();
-  //SEGFAULT Here!!!! Fix!!!!
   if (holders == NULL) return;
   exec_state_init();
   check_jobs_bg_status();
@@ -524,7 +526,9 @@ void run_script(CommandHolder* holders)
     end_main_loop();
     return;
   }
-
+  // BUG: jobs will execute, but then has a chance of looping syntax errors forever for some reason
+  // This specifically happens with sleep 15
+  
   pid_t* bg_pids = NULL;
   size_t num_pids = 0;
   size_t pid_cap = 0;
@@ -539,12 +543,22 @@ void run_script(CommandHolder* holders)
     
     if (holders[0].flags & BACKGROUND)
     {
-      pid_cap = pid_cap == 0 ? 4 : pid_cap * 2;
-      bg_pids = realloc(bg_pids, pid_cap * sizeof(pid_t));
-    }
+      if (num_pids >= pid_cap)
+      {
+        pid_cap = pid_cap == 0 ? 4 : pid_cap * 2;
+        pid_t* new_pids = realloc(bg_pids, pid_cap * sizeof(pid_t));
+        if (!new_pids)
+        {
+          perror("ERROR: realloc failed for bg_pids");
+          free(bg_pids);
+          exit(1);
+        }
+        bg_pids = new_pids;
+      }
     
-    bg_pids[num_pids] = pid;
-    num_pids++;
+      bg_pids[num_pids] = pid;
+      num_pids++;
+    }
   }
 
   if (exec_g.prev_pipe_read != -1)
@@ -567,7 +581,7 @@ void run_script(CommandHolder* holders)
     job.pids = malloc(sizeof(pid_t) * job.num_pids);
     memcpy(job.pids, bg_pids, sizeof(pid_t) * num_pids);
 
-    job.cmd_str = get_command_string();
+    job.cmd_str = strdup(get_command_string());
     job.job_complete = false;
 
     push_back_jobs_queue(&jobs_queue_g, job);
