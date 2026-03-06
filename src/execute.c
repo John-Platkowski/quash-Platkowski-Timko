@@ -209,10 +209,11 @@ void run_cd(CDCommand cmd)
 
   chdir(dir);
 
+  char* abs_path = get_current_dir_name();
   struct ExportCommand new_cmd = {
     CD,
     strdup("PWD"),
-    strdup(dir)
+    abs_path
   };
   run_export(new_cmd);
   free(old_cmd.env_var);
@@ -589,7 +590,7 @@ void run_script(CommandHolder* holders)
     job.pids = malloc(sizeof(pid_t) * job.num_pids);
     memcpy(job.pids, pids, sizeof(pid_t) * num_pids);
 
-    job.cmd_str = strdup(get_command_string());
+    job.cmd_str = get_command_string();
     job.job_complete = false;
 
     push_back_jobs_queue(&jobs_queue_g, job);
