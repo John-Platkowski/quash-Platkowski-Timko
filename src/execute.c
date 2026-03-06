@@ -76,9 +76,15 @@ void destroy_job(Job job)
   free(job.cmd_str);
 }
 
+void destroy_jobs()
+{
+  destroy_jobs_queue(&jobs_queue_g);
+}
+
 void init_jobs()
 {
   jobs_queue_g = new_destructable_jobs_queue(max_queue_length, destroy_job);
+  atexit(destroy_jobs);
 }
 // Check the status of background jobs
 void check_jobs_bg_status() 

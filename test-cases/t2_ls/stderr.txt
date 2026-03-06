@@ -1,21 +1,14 @@
-==16366== Memcheck, a memory error detector
-==16366== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
-==16366== Using Valgrind-3.18.1 and LibVEX; rerun with -h for copyright info
-==16366== Command: /home/johnplatkowski/Documents/Projects/quash-Platkowski-Timko/quash
-==16366== 
-==16366== 
-==16366== HEAP SUMMARY:
-==16366==     in use at exit: 800 bytes in 1 blocks
-==16366==   total heap usage: 9 allocs, 8 frees, 22,714 bytes allocated
-==16366== 
-==16366== LEAK SUMMARY:
-==16366==    definitely lost: 0 bytes in 0 blocks
-==16366==    indirectly lost: 0 bytes in 0 blocks
-==16366==      possibly lost: 0 bytes in 0 blocks
-==16366==    still reachable: 800 bytes in 1 blocks
-==16366==         suppressed: 0 bytes in 0 blocks
-==16366== Reachable blocks (those to which a pointer was found) are not shown.
-==16366== To see them, rerun with: --leak-check=full --show-leak-kinds=all
-==16366== 
-==16366== For lists of detected and suppressed errors, rerun with: -s
-==16366== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+==20351== Memcheck, a memory error detector
+==20351== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==20351== Using Valgrind-3.18.1 and LibVEX; rerun with -h for copyright info
+==20351== Command: /home/johnplatkowski/Documents/Projects/quash-Platkowski-Timko/quash
+==20351== 
+==20351== 
+==20351== HEAP SUMMARY:
+==20351==     in use at exit: 0 bytes in 0 blocks
+==20351==   total heap usage: 9 allocs, 9 frees, 22,714 bytes allocated
+==20351== 
+==20351== All heap blocks were freed -- no leaks are possible
+==20351== 
+==20351== For lists of detected and suppressed errors, rerun with: -s
+==20351== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
