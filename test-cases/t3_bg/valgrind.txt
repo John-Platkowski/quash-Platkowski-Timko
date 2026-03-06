@@ -1,52 +1,37 @@
-==42857== Memcheck, a memory error detector
-==42857== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
-==42857== Using Valgrind-3.22.0 and LibVEX; rerun with -h for copyright info
-==42857== Command: /home/j117p402/Documents/quash-Platkowski-Timko/quash
-==42857== 
-==42857== Invalid write of size 4
-==42857==    at 0x10CDE0: run_script (execute.c:545)
-==42857==    by 0x10A981: main (quash.c:121)
-==42857==  Address 0x0 is not stack'd, malloc'd or (recently) free'd
-==42857== 
-==42857== 
-==42857== Process terminating with default action of signal 11 (SIGSEGV)
-==42857==  Access not within mapped region at address 0x0
-==42857==    at 0x10CDE0: run_script (execute.c:545)
-==42857==    by 0x10A981: main (quash.c:121)
-==42857==  If you believe this happened as a result of a stack
-==42857==  overflow in your program's main thread (unlikely but
-==42857==  possible), you can try to increase the size of the
-==42857==  main thread stack using the --main-stacksize= flag.
-==42857==  The main thread stack size used in this run was 8388608.
-==42857== 
-==42857== HEAP SUMMARY:
-==42857==     in use at exit: 34,952 bytes in 12 blocks
-==42857==   total heap usage: 21 allocs, 9 frees, 37,752 bytes allocated
-==42857== 
-==42857== LEAK SUMMARY:
-==42857==    definitely lost: 0 bytes in 0 blocks
-==42857==    indirectly lost: 0 bytes in 0 blocks
-==42857==      possibly lost: 0 bytes in 0 blocks
-==42857==    still reachable: 34,952 bytes in 12 blocks
-==42857==         suppressed: 0 bytes in 0 blocks
-==42857== Reachable blocks (those to which a pointer was found) are not shown.
-==42857== To see them, rerun with: --leak-check=full --show-leak-kinds=all
-==42857== 
-==42857== For lists of detected and suppressed errors, rerun with: -s
-==42857== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 0 from 0)
-==42975== 
-==42975== HEAP SUMMARY:
-==42975==     in use at exit: 828 bytes in 3 blocks
-==42975==   total heap usage: 15 allocs, 12 frees, 36,374 bytes allocated
-==42975== 
-==42975== LEAK SUMMARY:
-==42975==    definitely lost: 0 bytes in 0 blocks
-==42975==    indirectly lost: 0 bytes in 0 blocks
-==42975==      possibly lost: 0 bytes in 0 blocks
-==42975==    still reachable: 828 bytes in 3 blocks
-==42975==         suppressed: 0 bytes in 0 blocks
-==42975== Reachable blocks (those to which a pointer was found) are not shown.
-==42975== To see them, rerun with: --leak-check=full --show-leak-kinds=all
-==42975== 
-==42975== For lists of detected and suppressed errors, rerun with: -s
-==42975== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+==16383== Memcheck, a memory error detector
+==16383== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==16383== Using Valgrind-3.18.1 and LibVEX; rerun with -h for copyright info
+==16383== Command: /home/johnplatkowski/Documents/Projects/quash-Platkowski-Timko/quash
+==16383== 
+==16546== 
+==16546== HEAP SUMMARY:
+==16546==     in use at exit: 828 bytes in 3 blocks
+==16546==   total heap usage: 15 allocs, 12 frees, 28,182 bytes allocated
+==16546== 
+==16546== LEAK SUMMARY:
+==16546==    definitely lost: 0 bytes in 0 blocks
+==16546==    indirectly lost: 0 bytes in 0 blocks
+==16546==      possibly lost: 0 bytes in 0 blocks
+==16546==    still reachable: 828 bytes in 3 blocks
+==16546==         suppressed: 0 bytes in 0 blocks
+==16546== Reachable blocks (those to which a pointer was found) are not shown.
+==16546== To see them, rerun with: --leak-check=full --show-leak-kinds=all
+==16546== 
+==16546== For lists of detected and suppressed errors, rerun with: -s
+==16546== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+==16383== 
+==16383== HEAP SUMMARY:
+==16383==     in use at exit: 800 bytes in 1 blocks
+==16383==   total heap usage: 30 allocs, 29 frees, 32,296 bytes allocated
+==16383== 
+==16383== LEAK SUMMARY:
+==16383==    definitely lost: 0 bytes in 0 blocks
+==16383==    indirectly lost: 0 bytes in 0 blocks
+==16383==      possibly lost: 0 bytes in 0 blocks
+==16383==    still reachable: 800 bytes in 1 blocks
+==16383==         suppressed: 0 bytes in 0 blocks
+==16383== Reachable blocks (those to which a pointer was found) are not shown.
+==16383== To see them, rerun with: --leak-check=full --show-leak-kinds=all
+==16383== 
+==16383== For lists of detected and suppressed errors, rerun with: -s
+==16383== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

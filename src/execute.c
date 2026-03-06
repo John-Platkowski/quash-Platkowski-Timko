@@ -20,8 +20,7 @@
 #include <sys/wait.h>
 #include <string.h>
 
-// Remove this and all expansion calls to it
-/**execvpPlease submit through your lab section's Canva
+/**
  * @brief Note calls to any function that requires implementation
  */
 #define IMPLEMENT_ME()                                                  \
@@ -36,7 +35,7 @@
  * Interface Functions
  ***************************************************************************/
 
-// Return a string containing the current workexecvping directory.
+// Return a string containing the current working directory.
 char* get_current_directory(bool* should_free) 
 { 
   *should_free = true;
@@ -47,7 +46,7 @@ char* get_current_directory(bool* should_free)
 // Returns the value of an environment variable env_var
 const char* lookup_env(const char* env_var) 
 {
-  // Lookup environment variables. This is requiexecvpred for parser to be able
+  // Lookup environment variables. This is requred for parser to be able
   // to interpret variables from the command line and display the prompt
   // correctly
 
